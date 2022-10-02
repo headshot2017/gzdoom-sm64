@@ -67,9 +67,9 @@ def main():
     shutil.rmtree("src/decomp/mario", ignore_errors=True)
     os.makedirs("src/decomp/mario", exist_ok=True)
 
-    print("Downloading " + GEO_URL)
+    print("Downloading " + GEO_URL + " to " + os.path.abspath("src/decomp/mario"))
     geo_inc_c = urllib.request.urlopen(GEO_URL).read().decode('utf8')
-    print("Downloading " + MODEL_URL)
+    print("Downloading " + MODEL_URL + " to " + os.path.abspath("src/decomp/mario"))
     model_inc_c = urllib.request.urlopen(MODEL_URL).read().decode('utf8')
 
     lines = model_inc_c.splitlines()
