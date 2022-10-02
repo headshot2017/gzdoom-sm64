@@ -4977,6 +4977,7 @@ bool AActor::UpdateWaterLevel(bool dosplash)
 
 	double fh = -FLT_MAX;
 	bool reset = false;
+	bool isMario = (player && player->marioId >= 0);
 
 	waterlevel = 0;
 
@@ -5053,6 +5054,13 @@ bool AActor::UpdateWaterLevel(bool dosplash)
 			}
 		}
 	}
+
+	if (isMario)
+	{
+		if (fh == -FLT_MAX) fh = -32768;
+		sm64_set_mario_water_level(player->marioId, (int)(fh*MARIO_SCALE));
+	}
+
 	return false;	// we did the splash ourselves
 }
 
