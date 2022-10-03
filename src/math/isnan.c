@@ -116,6 +116,7 @@ else
 
 /* Return 1 if x is a number that is Not a Number, else return 0.  */
 
+#ifndef NO_ZDOOM_ISNAN
 int isnan(x)
 double x;
 {
@@ -151,7 +152,7 @@ if( sizeof(int) == 4 )
 	return(0);
 	}
 else
-	{ /* size int not 4 */
+	{ // size int not 4
 #ifdef IBMPC
 	if( (u.s[3] & 0x7ff0) == 0x7ff0)
 		{
@@ -174,14 +175,14 @@ else
 		}
 #endif
 	return(0);
-	} /* size int not 4 */
+	} // size int not 4
 
 #else
-/* No NANS.  */
+// No NANS.
 return(0);
 #endif
 }
-
+#endif
 
 /* Return 1 if x is not infinite and is not a NaN.  */
 
