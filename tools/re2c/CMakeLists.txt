@@ -8,6 +8,8 @@ include( CheckTypeSize )
 if( MSVC )
 	# Runtime type information is required and don't complain about uint32_t to bool conversions
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR /wd4800" )
+elseif( MINGW )
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++" )
 endif()
 
 set( PACKAGE_NAME re2c )
