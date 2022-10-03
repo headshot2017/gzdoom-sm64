@@ -34,6 +34,10 @@
 */
 
 #include <stdio.h>
+#ifdef __MINGW32__
+#include <basetsd.h>
+#endif
+
 extern "C"
 {
 #include <jpeglib.h>
