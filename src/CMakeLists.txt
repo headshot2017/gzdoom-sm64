@@ -197,6 +197,12 @@ if( NOT NO_OPENAL )
 			else()
 				set( NO_OPENAL ON )
 			endif()
+		elseif( WIN32 )
+			set( OPENAL_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/windows/openal/include" )
+			set( OPENAL_LIBRARY "${CMAKE_SOURCE_DIR}/windows/openal/lib/openal32.dll" )
+			include_directories( ${OPENAL_INCLUDE_DIR} )
+			mark_as_advanced(CLEAR OPENAL_LIBRARY)
+			set( ZDOOM_LIBS ${OPENAL_LIBRARY} ${ZDOOM_LIBS} )
 		else()
 			set( NO_OPENAL ON )
 		endif()
@@ -214,19 +220,37 @@ else()
 	# Search for libSndFile
 
 	if ( NOT DYN_SNDFILE )
-		find_package( SndFile )
+		if( WIN32 )
+			set( SNDFILE_FOUND YES )
+			set( SNDFILE_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/windows/sndfile/include" )
+			set( SNDFILE_LIBRARIES "${CMAKE_SOURCE_DIR}/windows/sndfile/lib/libsndfile.dll" )
+		else()
+			find_package( SndFile )
+		endif()
 	endif()
 
 	# Search for libmpg123
 
 	if ( NOT DYN_MPG123 )
-		find_package( MPG123 )
+		if( WIN32 )
+			set( MPG123_FOUND YES )
+			set( MPG123_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/windows/mpg123/include" )
+			set( MPG123_LIBRARIES "${CMAKE_SOURCE_DIR}/windows/mpg123/lib/libmpg123.dll" )
+		else()
+			find_package( MPG123 )
+		endif()
 	endif()
 endif()
 
 # Search for FluidSynth
 
-find_package( FluidSynth )
+if ( WIN32 )
+	set( FLUIDSYNTH_FOUND YES )
+	set( FLUIDSYNTH_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/windows/fluidsynth/include" )
+	set( FLUIDSYNTH_LIBRARIES "${CMAKE_SOURCE_DIR}/windows/fluidsynth/lib/libfluidsynth64.dll" )
+else()
+	find_package( FluidSynth )
+endif()
 
 # Decide on SSE setup
 
