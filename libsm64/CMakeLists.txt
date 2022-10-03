@@ -16,7 +16,6 @@ file(GLOB SOURCES
 	src/decomp/*.c
 	src/decomp/engine/*.c
 	src/decomp/game/*.c
-	src/decomp/mario/*.c
 	src/decomp/tools/*.c
 	src/decomp/audio/*.c
 	src/decomp/pc/*.c
@@ -26,20 +25,21 @@ file(GLOB SOURCES
 
 find_package(PythonInterp 3 REQUIRED)
 
-add_library(sm64 SHARED ${SOURCES})
-include_directories(src/decomp/include)
-include_directories(src/decomp/mario)
-
 if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/decomp/mario)
-	add_custom_target(
-		run ALL
+	file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/decomp/mario")
+	execute_process(
 		COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/import-mario-geo.py
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		COMMENT "Download mario geo.inc and model.inc"
 	)
-
-	add_dependencies(sm64 run)
 endif()
+
+file(GLOB MARIO_SOURCES src/decomp/mario/*.c)
+
+add_library(sm64 SHARED ${SOURCES} ${MARIO_SOURCES})
+
+include_directories(src/decomp/include)
+include_directories(src/decomp/mario)
 
 target_compile_options(sm64 PRIVATE -Wall)
 target_compile_definitions(sm64 PRIVATE SM64_LIB_EXPORT VERSION_US NO_SEGMENTED_MEMORY GBI_FLOATS)
