@@ -29,6 +29,10 @@ option( DYN_OPENAL "Dynamically load OpenAL" ON )
 option( DYN_SNDFILE "Dynamically load libsndfile" ON )
 option( DYN_MPG123 "Dynamically load libmpg123" ON )
 
+if( MINGW )
+	add_definitions( -DNO_ZDOOM_SIGNBIT ) # multiple definitions error
+endif()
+
 if( APPLE )
     option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
 endif()

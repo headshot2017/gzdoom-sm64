@@ -75,6 +75,7 @@ Copyright 1984, 1995 by Stephen L. Moshier
 
 /* Return 1 if the sign bit of x is 1, else 0.  */
 
+#ifndef NO_ZDOOM_SIGNBIT
 int signbit(x)
 double x;
 {
@@ -112,11 +113,11 @@ else
 #endif
 	}
 }
+#endif
 
 
 /* Return 1 if x is a number that is Not a Number, else return 0.  */
 
-/*
 int isnan(x)
 double x;
 {
@@ -182,7 +183,6 @@ else
 return(0);
 #endif
 }
-*/
 
 /* Return 1 if x is not infinite and is not a NaN.  */
 
