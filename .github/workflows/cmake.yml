@@ -22,14 +22,23 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config Release
 
-    - name: Move libsm64.dll to build folder
-      run: mv ${{github.workspace}}/build/libsm64/libsm64.dll ${{github.workspace}}/build/
+    - name: Create dist folder with exe and dlls for upload
+      run:
+        mkdir ${{github.workspace}}/build/dist
+        mv ${{github.workspace}}/build/libsm64/libsm64.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/build/*.exe ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/build/*.pk3 ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/build/gzdoom.sf2 ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/openal/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/sndfile/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/mpg123/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/
 
     - name: Use the Upload Artifact GitHub Action
       uses: actions/upload-artifact@v2
       with:
         name: gzdoom-sm64-release
-        path: build
+        path: build/dist
 
   build-debug:
     runs-on: windows-latest
@@ -46,11 +55,20 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config Debug
 
-    - name: Move libsm64.dll to build folder
-      run: mv ${{github.workspace}}/build/libsm64/libsm64.dll ${{github.workspace}}/build/
+    - name: Create dist folder with exe and dlls for upload
+      run:
+        mkdir ${{github.workspace}}/build/dist
+        mv ${{github.workspace}}/build/libsm64/libsm64.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/build/*.exe ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/build/*.pk3 ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/build/gzdoom.sf2 ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/openal/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/sndfile/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/mpg123/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/
 
     - name: Use the Upload Artifact GitHub Action
       uses: actions/upload-artifact@v2
       with:
         name: gzdoom-sm64-debug
-        path: build
+        path: build/dist
