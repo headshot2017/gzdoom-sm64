@@ -1371,8 +1371,8 @@ static int DamageMobj (AActor *target, AActor *inflictor, AActor *source, int da
 		// [RH] Make voodoo dolls and real players record the same health
 		target->health = player->mo->health -= damage;
 
-		// SM64: knockback Mario
-		if (player->marioId >= 0)
+		// SM64: knockback Mario if he's not attacking
+		if (player->marioId >= 0 && !(player->marioState.action & ACT_FLAG_ATTACKING))
 		{
 			AActor *src = (source) ? source : target;
 			sm64_mario_take_damage(player->marioId, (uint32_t)(ceil(damage/15.f)), 0, src->Pos().X*MARIO_SCALE, src->Pos().Z*MARIO_SCALE, -src->Pos().Y*MARIO_SCALE);

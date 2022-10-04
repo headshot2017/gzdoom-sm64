@@ -1505,7 +1505,7 @@ s32 act_shocked(struct MarioState *m) {
         }
     } else {
         if (m->actionTimer >= 6) {
-            m->invincTimer = 30;
+            m->invincTimer = 60;
             set_mario_action(m, m->health < 0x0100 ? ACT_ELECTROCUTION : ACT_IDLE, 0);
         }
         stop_and_set_height_to_floor(m);

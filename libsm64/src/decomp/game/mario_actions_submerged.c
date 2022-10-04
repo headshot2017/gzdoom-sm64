@@ -881,7 +881,7 @@ static void common_water_knockback_step(struct MarioState *m, s32 animation, u32
 
     if (is_anim_at_end(m)) {
         if (arg3 > 0) {
-            m->invincTimer = 30;
+            m->invincTimer = 60;
         }
 
         set_mario_action(m, m->health >= 0x100 ? endAction : ACT_WATER_DEATH, 0);
