@@ -67,7 +67,9 @@ jobs:
         mv ${{github.workspace}}/windows/sndfile/lib/*.dll ${{github.workspace}}/build/dist/ &&
         mv ${{github.workspace}}/windows/mpg123/lib/*.dll ${{github.workspace}}/build/dist/ &&
         mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/ &&
-        mv ${{github.workspace}}/windows/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/libbz2-1.dll ${{github.workspace}}/build/dist/libbz2-1__.dll &&
+        mv ${{github.workspace}}/windows/libjpeg-8.dll ${{github.workspace}}/build/dist/libjpeg-9__.dll &&
+        mv ${{github.workspace}}/windows/zlib1.dll ${{github.workspace}}/build/dist/zlib1__.dll &&
 
     - name: Use the Upload Artifact GitHub Action
       uses: actions/upload-artifact@v2
