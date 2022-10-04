@@ -1247,7 +1247,7 @@ endif()
 
 target_link_libraries( zdoom ${ZDOOM_LIBS} gdtoa dumb lzma sm64 )
 if ( MINGW )
-	target_link_libraries( zdoom -static-libgcc -static-libstdc++ )
+	target_link_libraries( zdoom -static -static-libgcc -static-libstdc++ )
 endif()
 
 include_directories( .
