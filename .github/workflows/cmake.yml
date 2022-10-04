@@ -32,7 +32,8 @@ jobs:
         mv ${{github.workspace}}/windows/openal/lib/*.dll ${{github.workspace}}/build/dist/ &&
         mv ${{github.workspace}}/windows/sndfile/lib/*.dll ${{github.workspace}}/build/dist/ &&
         mv ${{github.workspace}}/windows/mpg123/lib/*.dll ${{github.workspace}}/build/dist/ &&
-        mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/ &&
+        mv ${{github.workspace}}/windows/*.dll ${{github.workspace}}/build/dist/
 
     - name: Use the Upload Artifact GitHub Action
       uses: actions/upload-artifact@v2
@@ -65,7 +66,8 @@ jobs:
         mv ${{github.workspace}}/windows/openal/lib/*.dll ${{github.workspace}}/build/dist/ &&
         mv ${{github.workspace}}/windows/sndfile/lib/*.dll ${{github.workspace}}/build/dist/ &&
         mv ${{github.workspace}}/windows/mpg123/lib/*.dll ${{github.workspace}}/build/dist/ &&
-        mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/
+        mv ${{github.workspace}}/windows/fluidsynth/lib/*.dll ${{github.workspace}}/build/dist/ &&
+        mv ${{github.workspace}}/windows/*.dll ${{github.workspace}}/build/dist/
 
     - name: Use the Upload Artifact GitHub Action
       uses: actions/upload-artifact@v2
