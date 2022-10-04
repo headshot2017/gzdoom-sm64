@@ -29,11 +29,6 @@ option( DYN_OPENAL "Dynamically load OpenAL" ON )
 option( DYN_SNDFILE "Dynamically load libsndfile" ON )
 option( DYN_MPG123 "Dynamically load libmpg123" ON )
 
-if( MINGW )
-	message("isnan disable")
-	add_definitions( -DNO_ZDOOM_ISNAN ) # multiple definitions error
-endif()
-
 if( APPLE )
     option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
 endif()

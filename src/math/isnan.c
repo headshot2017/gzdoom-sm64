@@ -116,7 +116,7 @@ else
 
 /* Return 1 if x is a number that is Not a Number, else return 0.  */
 
-#ifndef NO_ZDOOM_ISNAN
+/*
 int isnan(x)
 double x;
 {
@@ -182,7 +182,7 @@ else
 return(0);
 #endif
 }
-#endif
+*/
 
 /* Return 1 if x is not infinite and is not a NaN.  */
 
