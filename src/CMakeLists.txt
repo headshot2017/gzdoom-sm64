@@ -30,6 +30,7 @@ option( DYN_SNDFILE "Dynamically load libsndfile" ON )
 option( DYN_MPG123 "Dynamically load libmpg123" ON )
 
 if( MINGW )
+	message("isnan disable")
 	add_definitions( -DNO_ZDOOM_ISNAN ) # multiple definitions error
 endif()
 
