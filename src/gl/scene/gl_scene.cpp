@@ -69,6 +69,9 @@
 #include "gl/utility/gl_convert.h"
 #include "gl/utility/gl_templates.h"
 
+#include "p_tick.h"
+#include "d_main.h"
+
 //==========================================================================
 //
 // CVARs
@@ -803,6 +806,19 @@ sector_t * GLSceneDrawer::RenderViewpoint (AActor * camera, GL_IRECT * bounds, f
 	GLRenderer->mSky2Pos = (float)fmod(gl_frameMS * level.skyspeed2, 1024.f) * 90.f/256.f;
 
 
+	if (camera->player && camera->player-players==consoleplayer && camera->player->marioId >= 0)
+	{
+		// this will be used for 60fps geometry interpolation
+		static int last = 0;
+		int now = I_MSTime();
+		if (camera->player->marioRenderer->first < 2)
+		{
+			last = now;
+			camera->player->marioRenderer->first++;
+		}
+		if (!P_CheckTickerPaused()) camera->player->marioTicks += (now - last)/1000.f;
+		last = now;
+	}
 
 	if (camera->player && camera->player-players==consoleplayer &&
 		((camera->player->cheats & CF_CHASECAM) || (r_deathcamera && camera->health <= 0)) && camera==camera->player->mo)

@@ -38,6 +38,8 @@ class MarioRenderer
 	SM64MarioGeometryBuffers *geo;
 
 public:
+	int first;
+
 	MarioRenderer(SM64MarioGeometryBuffers *geometry);
 	~MarioRenderer();
 

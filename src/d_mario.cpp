@@ -147,6 +147,8 @@ MarioRenderer::MarioRenderer(SM64MarioGeometryBuffers *geometry) : geo(geometry)
 	X(9, uv_buf,       geometry->uv,       vec2);
 
 	#undef X
+
+	first = 0;
 }
 
 MarioRenderer::~MarioRenderer()

@@ -4138,8 +4138,6 @@ void AActor::Tick ()
 			if (!(flags & MF_NOGRAVITY)) flags |= MF_NOGRAVITY;
 			if (!(player->cheats & CF_CHASECAM)) player->cheats |= CF_CHASECAM; // force thirdperson camera
 
-			player->marioTicks += 1./TICRATE;
-
 			float dir = 0;
 			float spd = 0;
 			if (Button_Forward.bDown && Button_MoveRight.bDown)
@@ -4200,10 +4198,11 @@ void AActor::Tick ()
 
 				for (int i=0; i<3 * player->marioGeometry.numTrianglesUsed; i++)
 				{
-					// set scales and make Z negative
-					player->marioGeometry.position[i*3+0] /= MARIO_SCALE;
+					// set scales, make Z negative and aspect ratio correction (unsquish Mario)
+					player->marioGeometry.position[i*3+0] = ((player->marioGeometry.position[i*3+0] - player->marioState.position[0]) * 1.15f + player->marioState.position[0]) / MARIO_SCALE;
 					player->marioGeometry.position[i*3+1] /= MARIO_SCALE;
-					player->marioGeometry.position[i*3+2] /= -MARIO_SCALE;
+					player->marioGeometry.position[i*3+2] = ((player->marioGeometry.position[i*3+2] - player->marioState.position[2]) * 1.15f + player->marioState.position[2]) / -MARIO_SCALE;
+
 					player->marioGeometry.normal[i*3+2] *= -1;
 				}
 
