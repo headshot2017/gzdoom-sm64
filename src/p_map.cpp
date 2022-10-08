@@ -3144,7 +3144,7 @@ void FSlide::SlideMove(AActor *mo, DVector2 tryp, int numsteps)
 	if (mo->player && mo->player->mo == mo && mo->reactiontime > 0)
 		return;	// player coming right out of a teleporter.
 
-        bool isMario = (mo->player && mo->player->mo == mo && mo->player->marioId >= 0);
+	bool isMario = (mo->player && mo->player->mo == mo && mo->player->marioInstance);
 
 retry:
 	if (!--hitcount)

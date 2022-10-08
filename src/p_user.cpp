@@ -390,19 +390,10 @@ player_t::player_t()
 player_t::~player_t()
 {
 	DestroyPSprites();
-	if (marioId >= 0)
+	if (marioInstance)
 	{
-		sm64_mario_delete(marioId);
-		marioId = -1;
-
-		if (marioGeometry.position)
-		{
-			delete marioRenderer; marioRenderer = 0;
-			free(marioGeometry.position); marioGeometry.position = 0;
-			free(marioGeometry.normal); marioGeometry.normal = 0;
-			free(marioGeometry.color); marioGeometry.color = 0;
-			free(marioGeometry.uv); marioGeometry.uv = 0;
-		}
+		delete marioInstance;
+		marioInstance = 0;
 	}
 }
 

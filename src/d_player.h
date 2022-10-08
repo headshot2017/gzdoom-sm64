@@ -496,12 +496,7 @@ public:
 	bool ConversationFaceTalker;
 
 	// SM64 extras
-        MarioRenderer *marioRenderer;
-        int marioId = -1;
-        float marioTicks;
-        struct SM64MarioInputs marioInputs;
-        struct SM64MarioState marioState;
-        struct SM64MarioGeometryBuffers marioGeometry;
+	MarioInstance *marioInstance;
 
 	double GetDeltaViewHeight() const
 	{

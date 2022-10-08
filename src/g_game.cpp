@@ -1440,7 +1440,7 @@ void G_PlayerReborn (int player)
 	p->original_oldbuttons = ~0;
 	p->playerstate = PST_LIVE;
 
-	p->marioId = -1;
+	p->marioInstance = 0;
 
 	if (gamestate != GS_TITLELEVEL)
 	{

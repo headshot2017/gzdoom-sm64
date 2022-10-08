@@ -429,8 +429,10 @@ void GLSprite::Draw(int pass)
 			gl_RenderState.SetSplitPlanes(topp, bottomp);
 		}
 
-		if (actor->player && actor->player->marioId >= 0)
+		if (actor->player && actor->player->marioInstance)
 		{
+			// this is Mario. default sprite or 3d model will not be drawn
+			// Mario will be drawn further below
 		}
 		else if (!modelframe)
 		{
@@ -492,9 +494,9 @@ void GLSprite::Draw(int pass)
 	gl_RenderState.EnableTexture(true);
 	gl_RenderState.SetDynLight(0,0,0);
 
-	if (actor->player && actor->player->marioId >= 0)
+	if (actor->player && actor->player->marioInstance)
 	{
-		actor->player->marioRenderer->Render(gl_RenderState.mViewMatrix, gl_RenderState.mProjectionMatrix);
+		actor->player->marioInstance->Render(gl_RenderState.mViewMatrix, gl_RenderState.mProjectionMatrix);
 
 		// restore previous values
 		glBindVertexArray(GLRenderer->mVAOID);

@@ -2369,15 +2369,15 @@ double P_XYMovement (AActor *mo, DVector2 scroll)
 	double Oldfloorz = mo->floorz;
 	double oldz = mo->Z();
 
-	bool isMario = (mo->player && mo->player->mo == mo && mo->player->marioId >= 0);
+	bool isMario = (mo->player && mo->player->mo == mo && mo->player->marioInstance);
 	if (isMario)
 	{
 		mo->player->Uncrouch();
-		mo->Vel[0] = mo->player->mo->Vel[0] = 0.001f;
-		mo->Vel[1] = mo->player->mo->Vel[1] = 0.001f;
-		mo->Vel[2] = mo->player->mo->Vel[2] = 0.001f;
-		mo->SetXYZ(mo->player->marioState.position[0]/MARIO_SCALE, -mo->player->marioState.position[2]/MARIO_SCALE, mo->player->marioState.position[1]/MARIO_SCALE);
-		mo->Prev = mo->Pos();
+		mo->Vel[0] = mo->player->mo->Vel[0] = mo->player->marioInstance->state.velocity[0]/3;
+		mo->Vel[1] = mo->player->mo->Vel[1] = -mo->player->marioInstance->state.velocity[2]/3;
+		mo->Vel[2] = mo->player->mo->Vel[2] = mo->player->marioInstance->state.velocity[1]/4;
+		mo->SetXYZ(mo->player->marioInstance->state.position[0]/MARIO_SCALE, -mo->player->marioInstance->state.position[2]/MARIO_SCALE, mo->player->marioInstance->state.position[1]/MARIO_SCALE);
+		//mo->Prev = mo->Pos();
 		//return oldz;
 	}
 
@@ -4132,10 +4132,11 @@ void AActor::Tick ()
 	}
 	else
 	{
-		bool isMario = (player && player->marioId >= 0);
+		bool isMario = (player && player->marioInstance);
 		if (isMario)
 		{
 			if (!(flags & MF_NOGRAVITY)) flags |= MF_NOGRAVITY;
+			if (!(renderflags & RF_DONTINTERPOLATE)) renderflags |= RF_DONTINTERPOLATE;
 			if (!(player->cheats & CF_CHASECAM)) player->cheats |= CF_CHASECAM; // force thirdperson camera
 
 			float dir = 0;
@@ -4181,86 +4182,18 @@ void AActor::Tick ()
 				spd = 1;
 			}
 
-			player->marioInputs.stickX = cos(dir) * spd;
-			player->marioInputs.stickY = sin(dir) * spd;
+			player->marioInstance->input.stickX = cos(dir) * spd;
+			player->marioInstance->input.stickY = sin(dir) * spd;
 
-			player->marioInputs.camLookX = Pos().X - r_viewpoint.Pos.X;
-			player->marioInputs.camLookZ = -(Pos().Y - r_viewpoint.Pos.Y);
+			player->marioInstance->input.camLookX = Pos().X - r_viewpoint.Pos.X;
+			player->marioInstance->input.camLookZ = -(Pos().Y - r_viewpoint.Pos.Y);
 			
-			player->marioInputs.buttonA = Button_Jump.bDown;
-			player->marioInputs.buttonB = Button_Use.bDown;
-			player->marioInputs.buttonZ = Button_Crouch.bDown;
+			player->marioInstance->input.buttonA = Button_Jump.bDown;
+			player->marioInstance->input.buttonB = Button_Use.bDown;
+			player->marioInstance->input.buttonZ = Button_Crouch.bDown;
 
-			while (player->marioTicks > 1./30)
-			{
-				player->marioTicks -= 1./30;
-				sm64_mario_tick(player->marioId, &player->marioInputs, &player->marioState, &player->marioGeometry);
-
-				for (int i=0; i<3 * player->marioGeometry.numTrianglesUsed; i++)
-				{
-					// set scales, make Z negative and aspect ratio correction (unsquish Mario)
-					player->marioGeometry.position[i*3+0] = ((player->marioGeometry.position[i*3+0] - player->marioState.position[0]) * 1.15f + player->marioState.position[0]) / MARIO_SCALE;
-					player->marioGeometry.position[i*3+1] /= MARIO_SCALE;
-					player->marioGeometry.position[i*3+2] = ((player->marioGeometry.position[i*3+2] - player->marioState.position[2]) * 1.15f + player->marioState.position[2]) / -MARIO_SCALE;
-
-					player->marioGeometry.normal[i*3+2] *= -1;
-				}
-
-				player->marioRenderer->Update();
-
-				// hurt other objects/enemies in range
-				AActor *link, *next;
-				for (link = Sector->thinglist; link != NULL; link = next)
-				{
-					next = link->snext;
-
-					if (!(link->flags & MF_SHOOTABLE))
-						continue;			// not shootable (observer or dead)
-
-					if (link == this)
-						continue;
-
-					if (link->health <= 0)
-						continue;			// dead
-
-					if (link->flags2 & MF2_DORMANT)
-						continue;			// don't target dormant things
-
-					if (link->flags7 & MF7_NEVERTARGET)
-						continue;
-
-					float dist = sqrtf(pow(link->Pos().X*MARIO_SCALE - player->marioState.position[0], 2) + pow(link->Pos().Y*MARIO_SCALE + player->marioState.position[2], 2));
-					float ydist = fabs(link->Pos().Z*MARIO_SCALE - player->marioState.position[1])/4.5f;
-					if (dist > 150 || ydist > link->Height)
-						continue;
-
-					if (sm64_mario_attack(player->marioId, link->Pos().X*MARIO_SCALE, link->Pos().Z*MARIO_SCALE, -link->Pos().Y*MARIO_SCALE, 0))
-					{
-						int damage = 10;
-						if (player->marioState.action == ACT_JUMP_KICK)
-							damage += 5;
-						else if (player->marioState.action == ACT_GROUND_POUND)
-						{
-							damage += 15;
-							sm64_set_mario_action(player->marioId, ACT_TRIPLE_JUMP);
-							sm64_play_sound_global(SOUND_ACTION_HIT);
-						}
-
-						if (player->marioState.flags & MARIO_METAL_CAP)
-							damage += 25;
-
-						P_DamageMobj(link, this, this, damage, (FName)RADF_HURTSOURCE);
-					}
-				}
-			}
-
-			if (health > 0)
-				sm64_mario_set_health(player->marioId, (health <= 20) ? 0x200 : 0x880); // mario panting animation if low on health
-			else
-				sm64_mario_kill(player->marioId);
-
-			SetXYZ(player->marioState.position[0]/MARIO_SCALE, -player->marioState.position[2]/MARIO_SCALE, player->marioState.position[1]/MARIO_SCALE);
-			Prev = Pos();
+			SetXYZ(player->marioInstance->state.position[0]/MARIO_SCALE, -player->marioInstance->state.position[2]/MARIO_SCALE, player->marioInstance->state.position[1]/MARIO_SCALE);
+			//Prev = Pos();
 		}
 
 		if (!player || !(player->cheats & CF_PREDICTING))
@@ -4976,7 +4909,7 @@ bool AActor::UpdateWaterLevel(bool dosplash)
 
 	double fh = -FLT_MAX;
 	bool reset = false;
-	bool isMario = (player && player->marioId >= 0);
+	bool isMario = (player && player->marioInstance);
 
 	waterlevel = 0;
 
@@ -5057,7 +4990,7 @@ bool AActor::UpdateWaterLevel(bool dosplash)
 	if (isMario)
 	{
 		if (fh == -FLT_MAX) fh = -32768;
-		sm64_set_mario_water_level(player->marioId, (int)(fh*MARIO_SCALE));
+		sm64_set_mario_water_level(player->marioInstance->ID(), (int)(fh*MARIO_SCALE));
 	}
 
 	return false;	// we did the splash ourselves
@@ -5882,18 +5815,17 @@ APlayerPawn *P_SpawnPlayer (FPlayerStart *mthing, int playernum, int flags)
 // SM64: Spawn Mario
 void SpawnMario(int playernum)
 {
-        player_t *p = &players[playernum];
-        if (!p) return;
-        AActor *mobj = p->mo;
-        if (!mobj) return;
+	player_t *p = &players[playernum];
+	if (!p) return;
+	AActor *mobj = p->mo;
+	if (!mobj) return;
 
-        p->marioGeometry.position = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
-        p->marioGeometry.color    = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
-        p->marioGeometry.normal   = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
-        p->marioGeometry.uv       = (float*)malloc( sizeof(float) * 6 * SM64_GEO_MAX_TRIANGLES );
-        p->marioRenderer = new MarioRenderer(&p->marioGeometry);
-
-        p->marioId = sm64_mario_create(mobj->X()*IMARIO_SCALE, mobj->Z()*IMARIO_SCALE, -mobj->Y()*IMARIO_SCALE, 0,0,0,0);
+	int marioId = sm64_mario_create(mobj->X()*IMARIO_SCALE, mobj->Z()*IMARIO_SCALE, -mobj->Y()*IMARIO_SCALE, 0,0,0,0);
+	if (marioId >= 0)
+	{
+		// spawn successful, create mario instance
+		p->marioInstance = new MarioInstance(marioId, mobj);
+	}
 }
 
 //

@@ -355,7 +355,7 @@ void G_NewInit ()
 		::new(p) player_t;
 		players[i].cheats |= chasecam;
 		players[i].playerstate = PST_DEAD;
-		players[i].marioId = -1;
+		players[i].marioInstance = 0;
 		playeringame[i] = 0;
 		players[i].userinfo.TransferFrom(saved_ui);
 	}

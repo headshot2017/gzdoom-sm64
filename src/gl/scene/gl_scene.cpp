@@ -806,17 +806,21 @@ sector_t * GLSceneDrawer::RenderViewpoint (AActor * camera, GL_IRECT * bounds, f
 	GLRenderer->mSky2Pos = (float)fmod(gl_frameMS * level.skyspeed2, 1024.f) * 90.f/256.f;
 
 
-	if (camera->player && camera->player-players==consoleplayer && camera->player->marioId >= 0)
+	if (camera->player && camera->player-players==consoleplayer && camera->player->marioInstance)
 	{
 		// this will be used for 60fps geometry interpolation
 		static int last = 0;
 		int now = I_MSTime();
-		if (camera->player->marioRenderer->first < 2)
+		if (camera->player->marioInstance->first < 2)
 		{
 			last = now;
-			camera->player->marioRenderer->first++;
+			camera->player->marioInstance->first++;
 		}
-		if (!P_CheckTickerPaused()) camera->player->marioTicks += (now - last)/1000.f;
+		if (!P_CheckTickerPaused())
+		{
+			// SM64: tick mario here
+			camera->player->marioInstance->Tick((now - last)/1000.f);
+		}
 		last = now;
 	}
 

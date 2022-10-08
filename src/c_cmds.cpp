@@ -1163,56 +1163,65 @@ CCMD(currentpos)
 
 CCMD(setpos)
 {
-        AActor *mo = players[consoleplayer].mo;
-        if(mo)
-        {
-                if (argv.argc() > 2)
-                {
-                        mo->SetXY(DVector2(atof(argv[1]), atof(argv[2])));
-                        if (players[consoleplayer].marioId >= 0)
-                                sm64_set_mario_position(players[consoleplayer].marioId, atof(argv[1])*MARIO_SCALE, players[consoleplayer].marioState.position[1], -atof(argv[2])*MARIO_SCALE);
-                }
-        }
-        else
-        {
-                Printf("You are not in game!\n");
-        }
+	AActor *mo = players[consoleplayer].mo;
+	if(mo)
+	{
+		if (argv.argc() > 2)
+		{
+			mo->SetXY(DVector2(atof(argv[1]), atof(argv[2])));
+			if (players[consoleplayer].marioInstance)
+			{
+				MarioInstance *mario = players[consoleplayer].marioInstance;
+				sm64_set_mario_position(mario->ID(), atof(argv[1])*MARIO_SCALE, mario->state.position[1], -atof(argv[2])*MARIO_SCALE);
+			}
+		}
+	}
+	else
+	{
+		Printf("You are not in game!\n");
+	}
 }
 
 CCMD(setpos3)
 {
-        AActor *mo = players[consoleplayer].mo;
-        if(mo)
-        {
-                if (argv.argc() > 3)
-                {
-                        mo->SetXYZ(DVector3(atof(argv[1]), atof(argv[2]), atof(argv[3])));
-                        if (players[consoleplayer].marioId >= 0)
-                                sm64_set_mario_position(players[consoleplayer].marioId, atof(argv[1])*MARIO_SCALE, atof(argv[3])*MARIO_SCALE, -atof(argv[2])*MARIO_SCALE);
-                }
-        }
-        else
-        {
-                Printf("You are not in game!\n");
-        }
+	AActor *mo = players[consoleplayer].mo;
+	if(mo)
+	{
+		if (argv.argc() > 3)
+		{
+			mo->SetXYZ(DVector3(atof(argv[1]), atof(argv[2]), atof(argv[3])));
+			if (players[consoleplayer].marioInstance)
+			{
+				MarioInstance *mario = players[consoleplayer].marioInstance;
+				sm64_set_mario_position(mario->ID(), atof(argv[1])*MARIO_SCALE, atof(argv[3])*MARIO_SCALE, -atof(argv[2])*MARIO_SCALE);
+			}
+		}
+	}
+	else
+	{
+		Printf("You are not in game!\n");
+	}
 }
 
 CCMD(addposz)
 {
-        AActor *mo = players[consoleplayer].mo;
-        if(mo)
-        {
-                if (argv.argc() > 1)
-                {
-                        mo->SetZ(mo->Z() + atof(argv[1]));
-                        if (players[consoleplayer].marioId >= 0)
-                                sm64_set_mario_position(players[consoleplayer].marioId, players[consoleplayer].marioState.position[0], players[consoleplayer].marioState.position[1] + (atof(argv[1])*MARIO_SCALE), players[consoleplayer].marioState.position[2]);
-                }
-        }
-        else
-        {
-                Printf("You are not in game!\n");
-        }
+	AActor *mo = players[consoleplayer].mo;
+	if(mo)
+	{
+		if (argv.argc() > 1)
+		{
+			mo->SetZ(mo->Z() + atof(argv[1]));
+			if (players[consoleplayer].marioInstance)
+			{
+				MarioInstance *mario = players[consoleplayer].marioInstance;
+				sm64_set_mario_position(mario->ID(), mario->state.position[0], mario->state.position[1] + (atof(argv[1])*MARIO_SCALE), mario->state.position[2]);
+			}
+		}
+	}
+	else
+	{
+		Printf("You are not in game!\n");
+	}
 }
 
 //-----------------------------------------------------------------------------

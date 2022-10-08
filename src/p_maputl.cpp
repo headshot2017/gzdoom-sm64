@@ -585,9 +585,9 @@ void AActor::SetOrigin(double x, double y, double z, bool moving)
 	P_FindFloorCeiling(this, FFCF_ONLYSPAWNPOS);
 	if (!moving) ClearInterpolation();
 
-	bool isMario = (player && player->mo == this && player->marioId >= 0);
+	bool isMario = (player && player->mo == this && player->marioInstance);
 	if (isMario)
-		sm64_set_mario_position(player->marioId, x*MARIO_SCALE, z*MARIO_SCALE, -y*MARIO_SCALE);
+		sm64_set_mario_position(player->marioInstance->ID(), x*MARIO_SCALE, z*MARIO_SCALE, -y*MARIO_SCALE);
 }
 
 DEFINE_ACTION_FUNCTION(AActor, SetOrigin)

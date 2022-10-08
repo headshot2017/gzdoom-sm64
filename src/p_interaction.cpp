@@ -715,7 +715,7 @@ void AActor::Die (AActor *source, AActor *inflictor, int dmgflags)
 	if (diestate != NULL)
 	{
 		// SM64: don't play doomguy death sound
-		if (!player || player->marioId < 0)
+		if (!player || !player->marioInstance)
 			SetState (diestate);
 
 		if (tics > 1)
@@ -1364,7 +1364,7 @@ static int DamageMobj (AActor *target, AActor *inflictor, AActor *source, int da
 		}
 
 		// SM64: don't hurt player if Mario is in an invulnerable state
-		if (player->marioId >= 0 && (player->marioState.action & ACT_FLAG_INTANGIBLE || player->marioState.action & ACT_FLAG_INVULNERABLE))
+		if (player->marioInstance && (player->marioInstance->state.action & ACT_FLAG_INTANGIBLE || player->marioInstance->state.action & ACT_FLAG_INVULNERABLE))
 			return 0;
 
 		player->health -= damage;		// mirror mobj health here for Dave
@@ -1372,10 +1372,10 @@ static int DamageMobj (AActor *target, AActor *inflictor, AActor *source, int da
 		target->health = player->mo->health -= damage;
 
 		// SM64: knockback Mario if he's not attacking
-		if (player->marioId >= 0 && !(player->marioState.action & ACT_FLAG_ATTACKING))
+		if (player->marioInstance && !(player->marioInstance->state.action & ACT_FLAG_ATTACKING))
 		{
 			AActor *src = (source) ? source : target;
-			sm64_mario_take_damage(player->marioId, (uint32_t)(ceil(damage/15.f)), 0, src->Pos().X*MARIO_SCALE, src->Pos().Z*MARIO_SCALE, -src->Pos().Y*MARIO_SCALE);
+			sm64_mario_take_damage(player->marioInstance->ID(), (uint32_t)(ceil(damage/15.f)), 0, src->Pos().X*MARIO_SCALE, src->Pos().Z*MARIO_SCALE, -src->Pos().Y*MARIO_SCALE);
 		}
 
 		if (player->health < 50 && !deathmatch && !(flags & DMG_FORCED))
@@ -1578,7 +1578,7 @@ dopain:
 			else
 			{
 				justhit = true;
-				if (!target->player || target->player->marioId < 0) // SM64: don't play doomguy hurt sound along with Mario's
+				if (!target->player || !target->player->marioInstance) // SM64: don't play doomguy hurt sound along with Mario's
 				{
 					FState *painstate = target->FindState(NAME_Pain, ((inflictor && inflictor->PainType != NAME_None) ? inflictor->PainType : mod));
 					if (painstate != NULL)
