@@ -2094,63 +2094,64 @@ static void D_DoomInit()
 
 static void D_SM64Init()
 {
-        FILE *f = fopen("sm64.us.z64", "rb");
+	FILE *f = fopen("sm64.us.z64", "rb");
 
-        if (!f)
-        {
-                I_FatalError(
-                        "Super Mario 64 US ROM not found!\n\n"
-                        "Please provide a ROM with the filename \"sm64.us.z64\"\n"
-                        "And make sure it matches the SHA-1 hash:\n"
-                        SM64_SHA1
-                );
-                return;
-        }
+	if (!f)
+	{
+		I_FatalError(
+			"Super Mario 64 US ROM not found!\n\n"
+			"Please provide a ROM with the filename \"sm64.us.z64\"\n"
+			"And make sure it matches the SHA-1 hash:\n"
+			SM64_SHA1
+		);
+		return;
+	}
 
-        // load ROM into memory
-        uint8_t *romBuffer;
-        size_t romFileLength;
+	// load ROM into memory
+	uint8_t *romBuffer;
+	size_t romFileLength;
 
-        fseek(f, 0, SEEK_END);
-        romFileLength = (size_t)ftell(f);
-        rewind(f);
-        romBuffer = (uint8_t*)malloc(romFileLength + 1);
-        fread(romBuffer, 1, romFileLength, f);
-        romBuffer[romFileLength] = 0;
-        fclose(f);
+	fseek(f, 0, SEEK_END);
+	romFileLength = (size_t)ftell(f);
+	rewind(f);
+	romBuffer = (uint8_t*)malloc(romFileLength + 1);
+	fread(romBuffer, 1, romFileLength, f);
+	romBuffer[romFileLength] = 0;
+	fclose(f);
 
-        // perform SHA-1 check to make sure it's the correct ROM
-        char hashResult[21];
-        char hashHexResult[41];
-        SHA1(hashResult, (char*)romBuffer, romFileLength);
+	// perform SHA-1 check to make sure it's the correct ROM
+	char hashResult[21];
+	char hashHexResult[41];
+	SHA1(hashResult, (char*)romBuffer, romFileLength);
 
-        for( int offset = 0; offset < 20; offset++)
-                sprintf( ( hashHexResult + (2*offset)), "%02x", hashResult[offset]&0xff);
+	for( int offset = 0; offset < 20; offset++)
+		sprintf( ( hashHexResult + (2*offset)), "%02x", hashResult[offset]&0xff);
 
-        if (strcmp(hashHexResult, SM64_SHA1)) // mismatch
-        {
-                char msg[256];
-                sprintf(msg, "Super Mario 64 US ROM SHA-1 mismatch!\n\n"
-                        "Expected: %s\n"
-                        "Your copy: %s\n"
-                        "Please provide the correct ROM",
-                        SM64_SHA1, hashHexResult);
+	if (strcmp(hashHexResult, SM64_SHA1)) // mismatch
+	{
+		char msg[256];
+		sprintf(msg,
+			"Super Mario 64 US ROM SHA-1 mismatch!\n\n"
+			"Expected: %s\n"
+			"Your copy: %s\n"
+			"Please provide the correct ROM",
+			SM64_SHA1, hashHexResult);
 
-                free(romBuffer);
-                I_FatalError(msg);
-                return;
-        }
+		free(romBuffer);
+		I_FatalError(msg);
+		return;
+	}
 
-        // all good at this point
+	// all good at this point
 
-        // Mario texture is 704x64 RGBA
-        MarioGlobal::texture = (uint8_t*)malloc(4 * SM64_TEXTURE_WIDTH * SM64_TEXTURE_HEIGHT);
+	// Mario texture is 704x64 RGBA
+	MarioGlobal::texture = (uint8_t*)malloc(4 * SM64_TEXTURE_WIDTH * SM64_TEXTURE_HEIGHT);
 
-        // load libsm64
-        sm64_global_terminate();
-        sm64_global_init(romBuffer, MarioGlobal::texture, D_SM64Debug);
-        Printf("libsm64: Super Mario 64 US ROM loaded!\n");
-        free(romBuffer);
+	// load libsm64
+	sm64_global_terminate();
+	sm64_global_init(romBuffer, MarioGlobal::texture, D_SM64Debug);
+	Printf("libsm64: Super Mario 64 US ROM loaded!\n");
+	free(romBuffer);
 }
 
 //==========================================================================

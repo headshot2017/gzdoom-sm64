@@ -252,8 +252,9 @@ void MarioInstance::Tick(float addTicks)
 					sm64_play_sound_global(SOUND_ACTION_HIT);
 				}
 
-				if (state.flags & MARIO_METAL_CAP)
-					damage += 25;
+				AInventory *item = parent->FindInventory("PowerStrength"); // detect Berserk pack
+				if (state.flags & MARIO_METAL_CAP || item)
+					damage += 30;
 
 				P_DamageMobj(link, parent, parent, damage, (FName)RADF_HURTSOURCE);
 			}
