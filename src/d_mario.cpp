@@ -312,7 +312,7 @@ void MarioInstance::Render(VSMatrix &view, VSMatrix &projection)
 	//glEnable(GL_CLIP_DISTANCE1);
 	//glEnable(GL_CLIP_DISTANCE2);
 	//glEnable(GL_CLIP_DISTANCE3);
-	glDepthMask(GL_FALSE);
+	//glDepthMask(GL_FALSE);
 	//glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	glActiveTexture(GL_TEXTURE0);
