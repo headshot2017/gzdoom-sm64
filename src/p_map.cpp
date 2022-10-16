@@ -5405,7 +5405,7 @@ bool P_UseTraverse(AActor *usething, const DVector2 &start, const DVector2 &end,
 					return true;
 				}
 
-				if (usething->player)
+				if (usething->player && !usething->player->marioInstance)
 				{
 					S_Sound(usething, CHAN_VOICE, "*usefail", 1, ATTN_IDLE);
 				}
@@ -5524,7 +5524,7 @@ void P_UseLines(player_t *player)
 		if ((!sec->SecActTarget || !sec->TriggerSectorActions(player->mo, spac)) &&
 			P_NoWayTraverse(player->mo, start, end))
 		{
-			S_Sound(player->mo, CHAN_VOICE, "*usefail", 1, ATTN_IDLE);
+			if (!player->marioInstance) S_Sound(player->mo, CHAN_VOICE, "*usefail", 1, ATTN_IDLE);
 		}
 	}
 }
