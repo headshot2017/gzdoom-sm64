@@ -41,6 +41,18 @@
 #include "portal.h"
 #include "p_blockmap.h"
 
+// SM64
+extern "C" {
+	#include <libsm64.h>
+}
+
+struct SM64DynamicObject
+{
+	SM64DynamicObject(uint32_t id, SM64ObjectTransform Transform) : ID(id), transform(Transform) {}
+	uint32_t ID;
+	SM64ObjectTransform transform;
+};
+
 struct FLevelLocals
 {
 	void Tick ();
@@ -70,6 +82,7 @@ struct FLevelLocals
 	TArray<vertex_t> vertexes;
 	TArray<sector_t> sectors;
 	TArray<line_t*> linebuffer;	// contains the line lists for the sectors.
+	TArray<SM64DynamicObject> dynamicObjects; // SM64
 	TArray<line_t> lines;
 	TArray<side_t> sides;
 	TArray<seg_t> segs;
