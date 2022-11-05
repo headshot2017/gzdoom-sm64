@@ -227,7 +227,20 @@ bool P_ActivateLine (line_t *line, AActor *mo, int side, int activationType, DVe
 // end of changed code
 	if (developer >= DMSG_SPAMMY && buttonSuccess)
 	{
-		Printf ("Line special %d activated on line %i\n", special, line->Index());
+		// arg 0 = sector tag
+		// arg 1 = type
+		//	- 0: normal (handled here)
+		//	- 1: copy (handled by the portal they copy)
+		//	- 2: EE-style skybox (handled by the camera object)
+		//  - 3: EE-style flat portal (GZDoom HW renderer only for now)
+		//  - 4: EE-style horizon portal (GZDoom HW renderer only for now)
+		//  - 5: copy portal to line (GZDoom HW renderer only for now)
+		//  - 6: linked portal
+		//	other values reserved for later use
+		// arg 2 = 0:floor, 1:ceiling, 2:both
+		// arg 3 = 0: anchor, 1: reference line
+		// arg 4 = for the anchor only: alpha
+		Printf ("Line special %d activated on line %i (%d %d %d %d %d, %d)\n", special, line->Index(), line->args[0], line->args[1], line->args[2], line->args[3], line->args[4], P_FindFirstSectorFromTag(line->args[0]));
 	}
 	return true;
 }
