@@ -1224,6 +1224,23 @@ CCMD(addposz)
 	}
 }
 
+CCMD(mario_disable)
+{
+	AActor *mo = players[consoleplayer].mo;
+	if(mo)
+	{
+		if (players[consoleplayer].marioInstance)
+		{
+			delete players[consoleplayer].marioInstance;
+			players[consoleplayer].marioInstance = 0;
+		}
+	}
+	else
+	{
+		Printf("You are not in game!\n");
+	}
+}
+
 //-----------------------------------------------------------------------------
 //
 // Print secret info (submitted by Karl Murks)
