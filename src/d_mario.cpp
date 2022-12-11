@@ -6,6 +6,8 @@
 #include "doomtype.h"
 #include "i_system.h"
 #include "p_local.h"
+#include "g_levellocals.h"
+#include "dsectoreffect.h"
 
 #include "gl/system/gl_interface.h"
 #include "gl/renderer/gl_renderer.h"
@@ -192,6 +194,32 @@ void MarioInstance::Tick(float addTicks)
 
 	while (ticks > 1.f/30)
 	{
+		for (uint32_t i=0; i<level.dynamicObjects.Size(); i++)
+		{
+			SM64DynamicDoomSector *dynsec = &level.dynamicObjects[i];
+			sector_t *sec = dynsec->sec;
+
+			float floorZ = sec->floorplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+			float ceilingZ = sec->ceilingplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+
+			//if (sec->floordata && dynsec->floor.transform.position[1] != floorZ - dynsec->floorSpawnZ)
+			if (dynsec->floor.transform.position[1] != floorZ - dynsec->floorSpawnZ)
+			{
+				if (developer >= DMSG_SPAMMY) Printf("%d: floor data: %.0f %.0f %.0f\n", sec->sectornum, dynsec->floorSpawnZ, floorZ, ceilingZ);
+				dynsec->floor.transform.position[1] = floorZ - dynsec->floorSpawnZ;
+				sm64_surface_object_move(dynsec->floor.ID, &dynsec->floor.transform);
+				if (dynsec->moveWalls) sm64_surface_object_move(dynsec->walls.ID, &dynsec->floor.transform);
+			}
+			//if (sec->ceilingdata && dynsec->ceiling.transform.position[1] != ceilingZ)
+			if (dynsec->ceiling.transform.position[1] != ceilingZ)
+			{
+				if (developer >= DMSG_SPAMMY) Printf("%d: ceiling data: %.0f %.0f\n", sec->sectornum, floorZ, ceilingZ);
+				dynsec->ceiling.transform.position[1] = ceilingZ;
+				if (dynsec->ceiling.ID != UINT_MAX) sm64_surface_object_move(dynsec->ceiling.ID, &dynsec->ceiling.transform);
+				sm64_surface_object_move(dynsec->walls.ID, &dynsec->ceiling.transform);
+			}
+		}
+
 		for (int i=0; i<9 * geometry.numTrianglesUsed; i++)
 		{
 			if (i<3) lastPos[i] = newPos[i];
