@@ -4,6 +4,7 @@
 
 #include "d_mario.h"
 #include "doomtype.h"
+#include "doomstat.h"
 #include "i_system.h"
 #include "p_local.h"
 #include "g_levellocals.h"
