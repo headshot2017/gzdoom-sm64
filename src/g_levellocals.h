@@ -48,9 +48,18 @@ extern "C" {
 
 struct SM64DynamicObject
 {
+	SM64DynamicObject() : ID(UINT_MAX) {}
 	SM64DynamicObject(uint32_t id, SM64ObjectTransform Transform) : ID(id), transform(Transform) {}
 	uint32_t ID;
 	SM64ObjectTransform transform;
+};
+
+struct SM64DynamicDoomSector
+{
+	struct SM64DynamicObject floor, walls, ceiling;
+	float floorSpawnZ, ceilingSpawnZ;
+	bool moveWalls; // true: raising/lowering platforms, false: elevators on enclosed spaces
+	sector_t* sec;
 };
 
 struct FLevelLocals
@@ -82,7 +91,7 @@ struct FLevelLocals
 	TArray<vertex_t> vertexes;
 	TArray<sector_t> sectors;
 	TArray<line_t*> linebuffer;	// contains the line lists for the sectors.
-	TArray<SM64DynamicObject> dynamicObjects; // SM64
+	TArray<SM64DynamicDoomSector> dynamicObjects; // SM64
 	TArray<line_t> lines;
 	TArray<side_t> sides;
 	TArray<seg_t> segs;

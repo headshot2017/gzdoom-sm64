@@ -3586,6 +3586,15 @@ void P_FreeLevelData ()
 	P_FreeStrifeConversations ();
 	level.Scrolls.Clear();
 	P_ClearUDMFKeys();
+
+	// SM64: delete all dynamic objects
+	for (uint32_t i=0; i<level.dynamicObjects.Size(); i++)
+	{
+		if (level.dynamicObjects[i].floor.ID != UINT_MAX) sm64_surface_object_delete(level.dynamicObjects[i].floor.ID);
+		if (level.dynamicObjects[i].walls.ID != UINT_MAX) sm64_surface_object_delete(level.dynamicObjects[i].walls.ID);
+		if (level.dynamicObjects[i].ceiling.ID != UINT_MAX) sm64_surface_object_delete(level.dynamicObjects[i].ceiling.ID);
+	}
+	level.dynamicObjects.Clear();
 }
 
 //===========================================================================
@@ -3624,22 +3633,22 @@ struct SM64DoomGround
 	std::vector<std::vector<Point>> polygon;
 };
 
-SM64Surface* P_AddSM64Sector(sector_t *sec, SM64Surface *surfaces, uint32_t& surfaceCount, std::vector<int>& dynamicSectors, std::vector<int>& dynamicLines, FILE *f)
+struct DynamicSectorInfo
+{
+	int sectornum;
+	bool moveWalls;
+};
+
+std::vector<SM64DoomGround> triangulateGround(sector_t *sec)
 {
 	int i = sec->sectornum;
-	// first, create the floor for each sector by adding lines and using earcut triangulation algorithm
 
 	std::vector<line_t*> remainingLines;
 	std::vector<SM64DoomGround> grounds;
 
-	char buf[256];
+	// first, create the floor for each sector by adding lines
 	for (line_t *line : sec->Lines)
-	{
 		remainingLines.push_back(line);
-	}
-
-	float floorZ = sec->floorplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
-	float ceilingZ = sec->ceilingplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
 
 	bool holesAdded = false;
 	while (!remainingLines.empty())
@@ -3745,7 +3754,232 @@ SM64Surface* P_AddSM64Sector(sector_t *sec, SM64Surface *surfaces, uint32_t& sur
 		grounds.push_back(ground);
 	}
 
-	// triangulate all the grounds
+	return grounds;
+}
+
+void P_AddSM64DynamicSector(DynamicSectorInfo& secinfo, std::vector<int>& dynamicLines, FILE *f)
+{
+	sector_t *sec = &level.sectors[secinfo.sectornum];
+
+	char buf[256];
+	int i = sec->sectornum;
+	std::vector<SM64DoomGround> grounds = triangulateGround(sec);
+	SM64DynamicDoomSector dynsec;
+	dynsec.sec = sec;
+	dynsec.moveWalls = secinfo.moveWalls;
+
+	SM64SurfaceObject floorSurfaceObj;
+	SM64SurfaceObject wallSurfaceObj;
+	SM64SurfaceObject ceilingSurfaceObj;
+	SM64Surface* floorSurfaces = NULL;
+	SM64Surface* wallSurfaces = NULL;
+	SM64Surface* ceilingSurfaces = NULL;
+	uint32_t floorSurfaceCount = 0;
+	uint32_t wallSurfaceCount = 0;
+	uint32_t ceilingSurfaceCount = 0;
+
+	float floorZ = sec->floorplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+	float ceilingZ = sec->ceilingplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+	dynsec.floorSpawnZ = floorZ;
+	dynsec.ceilingSpawnZ = ceilingZ;
+
+	// add the triangulated ground
+	for (uint32_t j=0; j<grounds.size(); j++)
+	{
+		SM64DoomGround &ground = grounds[j];
+
+		std::vector<uint32_t> indices = mapbox::earcut<uint32_t>(ground.polygon);
+
+		for (uint32_t j=0; j<indices.size(); j+=3)
+		{
+			Point &line1 = ground.polygon[0][indices[j+0]];
+			Point &line2 = ground.polygon[0][indices[j+1]];
+			Point &line3 = ground.polygon[0][indices[j+2]];
+
+			// check if there is a ceiling
+			bool hasCeiling = (ceilingZ != floorZ);
+
+			if (hasCeiling)
+			{
+				ceilingSurfaceCount++;
+				ceilingSurfaces = (struct SM64Surface*)realloc(ceilingSurfaces, sizeof(struct SM64Surface) * ceilingSurfaceCount);
+
+				ceilingSurfaces[ceilingSurfaceCount-1].type = SURFACE_DEFAULT;
+				ceilingSurfaces[ceilingSurfaceCount-1].force = 0;
+				ceilingSurfaces[ceilingSurfaceCount-1].terrain = TERRAIN_STONE;
+
+				ceilingSurfaces[ceilingSurfaceCount-1].vertices[0][0] = line3[0];	ceilingSurfaces[ceilingSurfaceCount-1].vertices[0][1] = ceilingZ;	ceilingSurfaces[ceilingSurfaceCount-1].vertices[0][2] = -line3[1];
+				ceilingSurfaces[ceilingSurfaceCount-1].vertices[1][0] = line2[0];	ceilingSurfaces[ceilingSurfaceCount-1].vertices[1][1] = ceilingZ;	ceilingSurfaces[ceilingSurfaceCount-1].vertices[1][2] = -line2[1];
+				ceilingSurfaces[ceilingSurfaceCount-1].vertices[2][0] = line1[0];	ceilingSurfaces[ceilingSurfaceCount-1].vertices[2][1] = ceilingZ;	ceilingSurfaces[ceilingSurfaceCount-1].vertices[2][2] = -line1[1];
+
+				fprintf(f, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}}, // ceiling %d/%d (%d actual lines), sector %d\n",
+					ceilingSurfaces[ceilingSurfaceCount-1].vertices[0][0], ceilingSurfaces[ceilingSurfaceCount-1].vertices[0][1], ceilingSurfaces[ceilingSurfaceCount-1].vertices[0][2],
+					ceilingSurfaces[ceilingSurfaceCount-1].vertices[1][0], ceilingSurfaces[ceilingSurfaceCount-1].vertices[1][1], ceilingSurfaces[ceilingSurfaceCount-1].vertices[1][2],
+					ceilingSurfaces[ceilingSurfaceCount-1].vertices[2][0], ceilingSurfaces[ceilingSurfaceCount-1].vertices[2][1], ceilingSurfaces[ceilingSurfaceCount-1].vertices[2][2],
+					j, indices.size(), sec->Lines.Size(), i);
+			}
+
+			floorSurfaceCount++;
+			floorSurfaces = (struct SM64Surface*)realloc(floorSurfaces, sizeof(struct SM64Surface) * floorSurfaceCount);
+
+			floorSurfaces[floorSurfaceCount-1].type = SURFACE_DEFAULT;
+			floorSurfaces[floorSurfaceCount-1].force = 0;
+			floorSurfaces[floorSurfaceCount-1].terrain = TERRAIN_STONE;
+
+			// floor
+			floorSurfaces[floorSurfaceCount-1].vertices[0][0] = line1[0];	floorSurfaces[floorSurfaceCount-1].vertices[0][1] = floorZ;	floorSurfaces[floorSurfaceCount-1].vertices[0][2] = -line1[1];
+			floorSurfaces[floorSurfaceCount-1].vertices[1][0] = line2[0];	floorSurfaces[floorSurfaceCount-1].vertices[1][1] = floorZ;	floorSurfaces[floorSurfaceCount-1].vertices[1][2] = -line2[1];
+			floorSurfaces[floorSurfaceCount-1].vertices[2][0] = line3[0];	floorSurfaces[floorSurfaceCount-1].vertices[2][1] = floorZ;	floorSurfaces[floorSurfaceCount-1].vertices[2][2] = -line3[1];
+
+			fprintf(f, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}}, // ground %d/%d (%d actual lines), sector %d\n",
+				floorSurfaces[floorSurfaceCount-1].vertices[0][0], floorSurfaces[floorSurfaceCount-1].vertices[0][1], floorSurfaces[floorSurfaceCount-1].vertices[0][2],
+				floorSurfaces[floorSurfaceCount-1].vertices[1][0], floorSurfaces[floorSurfaceCount-1].vertices[1][1], floorSurfaces[floorSurfaceCount-1].vertices[1][2],
+				floorSurfaces[floorSurfaceCount-1].vertices[2][0], floorSurfaces[floorSurfaceCount-1].vertices[2][1], floorSurfaces[floorSurfaceCount-1].vertices[2][2],
+				j, indices.size(), sec->Lines.Size(), i);
+		}
+	}
+
+	// set surface object parameters
+	floorSurfaceObj.surfaces = floorSurfaces;
+	floorSurfaceObj.surfaceCount = floorSurfaceCount;
+	memset((void*)&floorSurfaceObj.transform, 0, sizeof(struct SM64ObjectTransform));
+
+	// create the floor object
+	dynsec.floor.ID = sm64_surface_object_create(&floorSurfaceObj);
+	free(floorSurfaces);
+	floorSurfaces = NULL;
+
+	if (ceilingSurfaces)
+	{
+		// set surface object parameters
+		ceilingSurfaceObj.surfaces = ceilingSurfaces;
+		ceilingSurfaceObj.surfaceCount = ceilingSurfaceCount;
+		memset((void*)&ceilingSurfaceObj.transform, 0, sizeof(struct SM64ObjectTransform));
+
+		// create the ceiling object
+		dynsec.ceiling.ID = sm64_surface_object_create(&ceilingSurfaceObj);
+		free(ceilingSurfaces);
+		ceilingSurfaces = NULL;
+	}
+	else
+	{
+		// no ceiling
+		dynsec.ceiling.ID = UINT_MAX;
+	}
+
+	// now add the walls
+	for (uint32_t j=0; j<sec->Lines.Size(); j++)
+	{
+		line_t *line = sec->Lines[j];
+		//if (std::find(dynamicLines.begin(), dynamicLines.end(), line->Index()) != dynamicLines.end()) Printf("%d (%d) is in dynamicLines, %.0f %.0f, %.0f %.0f\n", j, line->Index(), line->v1->p.X, line->v1->p.Y, line->v2->p.X, line->v2->p.Y);
+		
+		/*if (i == 77)
+		{
+			Printf("%d %d: %.1f %.1f %.1f %.1f", i, j, line->v1->p.X, line->v1->p.Y, line->v2->p.X, line->v2->p.Y);
+			if (line->frontsector && line->frontsector->sectornum != i)
+				Printf(", has frontsector %d", line->frontsector->sectornum);
+			Printf("\n");
+		}*/
+
+		sector_t *sec = line->sidedef[0]->sector;
+		floorZ = sec->floorplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+		ceilingZ = sec->ceilingplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+
+		float bottomZ = 0;
+		float topZ = 0;
+		if (line->backsector) // this wall has a sector behind it
+		{
+			bottomZ = floorZ;
+			topZ = line->backsector->floorplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+
+			wallSurfaceCount += 2;
+			wallSurfaces = (struct SM64Surface*)realloc(wallSurfaces, sizeof(struct SM64Surface) * wallSurfaceCount);
+
+			wallSurfaces[wallSurfaceCount-2].type = wallSurfaces[wallSurfaceCount-1].type = SURFACE_DEFAULT;
+			wallSurfaces[wallSurfaceCount-2].force = wallSurfaces[wallSurfaceCount-1].force = 0;
+			wallSurfaces[wallSurfaceCount-2].terrain = wallSurfaces[wallSurfaceCount-1].terrain = TERRAIN_STONE;
+
+			wallSurfaces[wallSurfaceCount-2].vertices[0][0] = line->v2->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-2].vertices[0][1] = bottomZ;	wallSurfaces[wallSurfaceCount-2].vertices[0][2] = -line->v2->p.Y*MARIO_SCALE;
+			wallSurfaces[wallSurfaceCount-2].vertices[1][0] = line->v2->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-2].vertices[1][1] = topZ;		wallSurfaces[wallSurfaceCount-2].vertices[1][2] = -line->v2->p.Y*MARIO_SCALE;
+			wallSurfaces[wallSurfaceCount-2].vertices[2][0] = line->v1->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-2].vertices[2][1] = topZ;		wallSurfaces[wallSurfaceCount-2].vertices[2][2] = -line->v1->p.Y*MARIO_SCALE;
+
+			wallSurfaces[wallSurfaceCount-1].vertices[0][0] = line->v1->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-1].vertices[0][1] = topZ;		wallSurfaces[wallSurfaceCount-1].vertices[0][2] = -line->v1->p.Y*MARIO_SCALE;
+			wallSurfaces[wallSurfaceCount-1].vertices[1][0] = line->v1->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-1].vertices[1][1] = bottomZ;	wallSurfaces[wallSurfaceCount-1].vertices[1][2] = -line->v1->p.Y*MARIO_SCALE;
+			wallSurfaces[wallSurfaceCount-1].vertices[2][0] = line->v2->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-1].vertices[2][1] = bottomZ;	wallSurfaces[wallSurfaceCount-1].vertices[2][2] = -line->v2->p.Y*MARIO_SCALE;
+
+			fprintf(f, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}}, // line %d (%d), sector %d, wall (1)\n",
+				wallSurfaces[wallSurfaceCount-2].vertices[0][0], wallSurfaces[wallSurfaceCount-2].vertices[0][1], wallSurfaces[wallSurfaceCount-2].vertices[0][2],
+				wallSurfaces[wallSurfaceCount-2].vertices[1][0], wallSurfaces[wallSurfaceCount-2].vertices[1][1], wallSurfaces[wallSurfaceCount-2].vertices[1][2],
+				wallSurfaces[wallSurfaceCount-2].vertices[2][0], wallSurfaces[wallSurfaceCount-2].vertices[2][1], wallSurfaces[wallSurfaceCount-2].vertices[2][2],
+				j, line->Index(), i);
+
+			fprintf(f, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}}, // line %d (%d), sector %d, wall (2)\n",
+				wallSurfaces[wallSurfaceCount-1].vertices[0][0], wallSurfaces[wallSurfaceCount-1].vertices[0][1], wallSurfaces[wallSurfaceCount-1].vertices[0][2],
+				wallSurfaces[wallSurfaceCount-1].vertices[1][0], wallSurfaces[wallSurfaceCount-1].vertices[1][1], wallSurfaces[wallSurfaceCount-1].vertices[1][2],
+				wallSurfaces[wallSurfaceCount-1].vertices[2][0], wallSurfaces[wallSurfaceCount-1].vertices[2][1], wallSurfaces[wallSurfaceCount-1].vertices[2][2],
+				j, line->Index(), i);
+
+			bottomZ = line->backsector->ceilingplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+			topZ = ceilingZ;
+		}
+		else // this wall doesn't have a sector behind it
+		{
+			bottomZ = floorZ;
+			topZ = ceilingZ;
+		}
+
+		wallSurfaceCount += 2;
+		wallSurfaces = (struct SM64Surface*)realloc(wallSurfaces, sizeof(struct SM64Surface) * wallSurfaceCount);
+
+		wallSurfaces[wallSurfaceCount-2].type = wallSurfaces[wallSurfaceCount-1].type = SURFACE_DEFAULT;
+		wallSurfaces[wallSurfaceCount-2].force = wallSurfaces[wallSurfaceCount-1].force = 0;
+		wallSurfaces[wallSurfaceCount-2].terrain = wallSurfaces[wallSurfaceCount-1].terrain = TERRAIN_STONE;
+
+		wallSurfaces[wallSurfaceCount-2].vertices[0][0] = line->v2->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-2].vertices[0][1] = bottomZ;	wallSurfaces[wallSurfaceCount-2].vertices[0][2] = -line->v2->p.Y*MARIO_SCALE;
+		wallSurfaces[wallSurfaceCount-2].vertices[1][0] = line->v2->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-2].vertices[1][1] = topZ;		wallSurfaces[wallSurfaceCount-2].vertices[1][2] = -line->v2->p.Y*MARIO_SCALE;
+		wallSurfaces[wallSurfaceCount-2].vertices[2][0] = line->v1->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-2].vertices[2][1] = topZ;		wallSurfaces[wallSurfaceCount-2].vertices[2][2] = -line->v1->p.Y*MARIO_SCALE;
+
+		wallSurfaces[wallSurfaceCount-1].vertices[0][0] = line->v1->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-1].vertices[0][1] = topZ;		wallSurfaces[wallSurfaceCount-1].vertices[0][2] = -line->v1->p.Y*MARIO_SCALE;
+		wallSurfaces[wallSurfaceCount-1].vertices[1][0] = line->v1->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-1].vertices[1][1] = bottomZ;	wallSurfaces[wallSurfaceCount-1].vertices[1][2] = -line->v1->p.Y*MARIO_SCALE;
+		wallSurfaces[wallSurfaceCount-1].vertices[2][0] = line->v2->p.X*MARIO_SCALE;	wallSurfaces[wallSurfaceCount-1].vertices[2][1] = bottomZ;	wallSurfaces[wallSurfaceCount-1].vertices[2][2] = -line->v2->p.Y*MARIO_SCALE;
+
+		fprintf(f, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}}, // line %d, sector %d, wall (1)\n",
+			wallSurfaces[wallSurfaceCount-2].vertices[0][0], wallSurfaces[wallSurfaceCount-2].vertices[0][1], wallSurfaces[wallSurfaceCount-2].vertices[0][2],
+			wallSurfaces[wallSurfaceCount-2].vertices[1][0], wallSurfaces[wallSurfaceCount-2].vertices[1][1], wallSurfaces[wallSurfaceCount-2].vertices[1][2],
+			wallSurfaces[wallSurfaceCount-2].vertices[2][0], wallSurfaces[wallSurfaceCount-2].vertices[2][1], wallSurfaces[wallSurfaceCount-2].vertices[2][2],
+			j, i);
+
+		fprintf(f, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}}, // line %d, sector %d, wall (2)\n",
+			wallSurfaces[wallSurfaceCount-1].vertices[0][0], wallSurfaces[wallSurfaceCount-1].vertices[0][1], wallSurfaces[wallSurfaceCount-1].vertices[0][2],
+			wallSurfaces[wallSurfaceCount-1].vertices[1][0], wallSurfaces[wallSurfaceCount-1].vertices[1][1], wallSurfaces[wallSurfaceCount-1].vertices[1][2],
+			wallSurfaces[wallSurfaceCount-1].vertices[2][0], wallSurfaces[wallSurfaceCount-1].vertices[2][1], wallSurfaces[wallSurfaceCount-1].vertices[2][2],
+			j, i);
+	}
+
+	// set surface object parameters
+	wallSurfaceObj.surfaces = wallSurfaces;
+	wallSurfaceObj.surfaceCount = wallSurfaceCount;
+	memset((void*)&wallSurfaceObj.transform, 0, sizeof(struct SM64ObjectTransform));
+
+	// create the floor object
+	dynsec.walls.ID = sm64_surface_object_create(&wallSurfaceObj);
+	free(wallSurfaces);
+	wallSurfaces = NULL;
+
+	// add the dynsec object to the array
+	level.dynamicObjects.Push(dynsec);
+}
+
+SM64Surface* P_AddSM64Sector(sector_t *sec, SM64Surface *surfaces, uint32_t& surfaceCount, std::vector<DynamicSectorInfo>& dynamicSectors, std::vector<int>& dynamicLines, FILE *f)
+{
+	char buf[256];
+	int i = sec->sectornum;
+	std::vector<SM64DoomGround> grounds = triangulateGround(sec);
+
+	float floorZ = sec->floorplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+	float ceilingZ = sec->ceilingplane.ZatPoint(sec->centerspot)*MARIO_SCALE;
+
+	// add the triangulated ground
 	//if (i == 77) Printf("%d\n", grounds.size());
 	for (uint32_t j=0; j<grounds.size(); j++)
 	{
@@ -3765,11 +3999,11 @@ SM64Surface* P_AddSM64Sector(sector_t *sec, SM64Surface *surfaces, uint32_t& sur
 			surfaceCount += added;
 			surfaces = (struct SM64Surface*)realloc(surfaces, sizeof(struct SM64Surface) * surfaceCount);
 
-			for (uint32_t i=surfaceCount-added; i<surfaceCount; i++)
+			for (uint32_t k=surfaceCount-added; k<surfaceCount; k++)
 			{
-				surfaces[i].type = SURFACE_DEFAULT;
-				surfaces[i].force = 0;
-				surfaces[i].terrain = TERRAIN_STONE;
+				surfaces[k].type = SURFACE_DEFAULT;
+				surfaces[k].force = 0;
+				surfaces[k].terrain = TERRAIN_STONE;
 			}
 
 			if (added == 2)
@@ -3802,11 +4036,16 @@ SM64Surface* P_AddSM64Sector(sector_t *sec, SM64Surface *surfaces, uint32_t& sur
 		}
 	}
 
-	// now add the walls. this is much easier to do
+	// now add the walls
 	for (uint32_t j=0; j<sec->Lines.Size(); j++)
 	{
 		line_t *line = sec->Lines[j];
-		if (std::find(dynamicLines.begin(), dynamicLines.end(), line->Index()) != dynamicLines.end()) continue; // skip this line
+		if (std::find(dynamicLines.begin(), dynamicLines.end(), line->Index()) != dynamicLines.end())
+		{
+			//Printf("%d (%d) is in dynamicLines, %.0f %.0f (SKIP)\n", j, line->Index(), line->v1->p.X, line->v1->p.Y, line->v2->p.X, line->v2->p.Y);
+			continue; // skip this line
+		}
+		
 		/*if (i == 77)
 		{
 			Printf("%d %d: %.1f %.1f %.1f %.1f", i, j, line->v1->p.X, line->v1->p.Y, line->v2->p.X, line->v2->p.Y);
@@ -4385,15 +4624,17 @@ void P_SetupLevel (const char *lumpname, int position)
 	// don't use static/dynamic sectors vector; loop all level.sectors normally.
 	// at the beginning of the loop, enter another loop in the dynamicLines and check if sec->sectornum == line->sidedef[1]->sector->sectornum
 	// if yes: this is a dynamic sector
-	std::vector<int> dynamicSectors;
+	std::vector<DynamicSectorInfo> dynamicSectors;
 	std::vector<int> dynamicLines; // lines to skip that are used for doors/elevators
 	for (uint32_t i=0; i<level.lines.Size(); i++)
 	{
 		line_t *line = &level.lines[i];
 
-		if (line->activation == SPAC_Use && (line->special == 11 || line->special == 12 || line->special == 242)) // see p_lnspec.cpp
+		if (line->activation == SPAC_Use || line->activation == SPAC_Cross)
 		{
 			// skip interactable lines (doors, elevators...) as they will be added as dynamic objects instead
+			DynamicSectorInfo dynsec;
+			dynsec.moveWalls = !(line->special >= 20 && line->special <= 25) || line->special == 11;
 			int tag = line->args[0];
 			if (!tag)
 			{
@@ -4411,9 +4652,14 @@ void P_SetupLevel (const char *lumpname, int position)
 					dynamicLines.push_back(otherLine->Index());
 				}
 
-				if (std::find(dynamicSectors.begin(), dynamicSectors.end(), otherSec->sectornum) != dynamicSectors.end()) continue;
-				Printf("manual dynamic sec %d by line %d\n", otherSec->sectornum, line->Index());
-				dynamicSectors.push_back(otherSec->sectornum);
+				if (std::find_if(dynamicSectors.begin(), dynamicSectors.end(), [otherSec](const DynamicSectorInfo& s) {
+					return s.sectornum == otherSec->sectornum;
+				}) != dynamicSectors.end())
+					continue;
+
+				if (developer >= DMSG_SPAMMY) Printf("manual dynamic sec %d by line %d\n", otherSec->sectornum, line->Index());
+				dynsec.sectornum = otherSec->sectornum;
+				dynamicSectors.push_back(dynsec);
 			}
 			else
 			{
@@ -4425,9 +4671,14 @@ void P_SetupLevel (const char *lumpname, int position)
 					// add all these sectors to dynamicSectors, delete from staticSectors if it exists
 					sector_t* otherSec = &level.sectors[secnum];
 
-					if (std::find(dynamicSectors.begin(), dynamicSectors.end(), secnum) != dynamicSectors.end()) continue;
-					Printf("remote dynamic sec %d (%d) by line %d\n", secnum, otherSec->Lines.Size(), line->Index());
-					dynamicSectors.push_back(secnum);
+					if (std::find_if(dynamicSectors.begin(), dynamicSectors.end(), [secnum](const DynamicSectorInfo& s) {
+						return s.sectornum == secnum;
+					}) != dynamicSectors.end())
+						continue;
+
+					if (developer >= DMSG_SPAMMY) Printf("remote dynamic sec %d (%d) by line %d\n", secnum, otherSec->Lines.Size(), line->Index());
+					dynsec.sectornum = secnum;
+					dynamicSectors.push_back(dynsec);
 
 					for (uint32_t j=0; j<otherSec->Lines.Size(); j++)
 					{
@@ -4439,14 +4690,22 @@ void P_SetupLevel (const char *lumpname, int position)
 			}
 		}
 	}
-	if (std::find(dynamicLines.begin(), dynamicLines.end(), 68) != dynamicLines.end())
-		Printf("found line 68\n");
+	//if (std::find(dynamicLines.begin(), dynamicLines.end(), 68) != dynamicLines.end())
+		//Printf("found line 68\n");
 
 	// actual loops
 	for (uint32_t i=0; i<level.sectors.Size(); i++)
 	{
 		sector_t *sec = &level.sectors[i];
-		surfaces = P_AddSM64Sector(sec, surfaces, surfaceCount, dynamicSectors, dynamicLines, f);
+
+		std::vector<DynamicSectorInfo>::iterator pos = std::find_if(dynamicSectors.begin(), dynamicSectors.end(), [sec](const DynamicSectorInfo& s) {
+			return s.sectornum == sec->sectornum;
+		});
+
+		if (pos != dynamicSectors.end())
+			P_AddSM64DynamicSector(*pos, dynamicLines, f);
+		else
+			surfaces = P_AddSM64Sector(sec, surfaces, surfaceCount, dynamicSectors, dynamicLines, f);
 	}
 
 	// get Mario spawn coordinates
