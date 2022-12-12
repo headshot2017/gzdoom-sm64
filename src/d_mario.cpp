@@ -24,6 +24,7 @@ const char *MARIO_SHADER =
 "\n uniform mat4 view;"
 "\n uniform mat4 projection;"
 "\n uniform sampler2D marioTex;"
+"\n uniform float lightLevel;"
 "\n "
 "\n v2f vec3 v_color;"
 "\n v2f vec3 v_normal;"
@@ -57,7 +58,7 @@ const char *MARIO_SHADER =
 "\n         float light = .5 + .5 * clamp( dot( v_normal, v_light ), 0., 1. );"
 "\n         vec4 texColor = texture2D( marioTex, v_uv );"
 "\n         vec3 mainColor = mix( v_color, texColor.rgb, texColor.a ); // v_uv.x >= 0. ? texColor.a : 0. );"
-"\n         color = vec4( mainColor * light, 1 );"
+"\n         color = vec4( mainColor * light * lightLevel, 1 );"
 "\n     }"
 "\n "
 "\n #endif";
@@ -335,6 +336,7 @@ void MarioInstance::Render(VSMatrix &view, VSMatrix &projection)
 	glUniformMatrix4fv(glGetUniformLocation(MarioGlobal::shader, "view"), 1, GL_FALSE, (GLfloat*)&view);
 	glUniformMatrix4fv(glGetUniformLocation(MarioGlobal::shader, "projection"), 1, GL_FALSE, (GLfloat*)&projection);
 	glUniform1i(glGetUniformLocation(MarioGlobal::shader, "marioTex"), 2);
+	glUniform1f(glGetUniformLocation(MarioGlobal::shader, "lightLevel"), parent->Sector->lightlevel / 255.f);
 	glDrawElements(GL_TRIANGLES, geometry.numTrianglesUsed * 3, GL_UNSIGNED_SHORT, meshIndex);
 
 	//glEnable(GL_CLIP_DISTANCE0);
